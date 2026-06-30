@@ -17,6 +17,25 @@
 #include "imgui_impl_opengl3.h"
 #include "MemoryPatch.h"
 
+// ====================================================================
+// DAFTAR OFFSET MATANG ESP LINE (FREE FIRE MAX)
+// ====================================================================
+
+// STEP 1: KAMERA & PROYEKSI LAYAR (MENGUBAH 3D KE 2D LAYAR)
+#define OFFSET_GET_MAIN                 0xa7ed6c0
+#define OFFSET_WORLD_TO_SCREEN          0xa7ed344
+
+// STEP 2: MANAJEMEN PEMAIN & BATAS PERULANGAN
+#define OFFSET_GET_PLAYER_COUNT         0x645d5c4
+#define OFFSET_GET_LOCAL_PLAYER         0x64cbde8
+#define OFFSET_GET_PLAYER_BY_INDEX      0x7d3fb8c
+
+// STEP 3: DATA INTERNAL UNTUK POSISI DAN VALIDASI NYAWA MUSUH
+#define OFFSET_GET_POSITION             0x8857b00
+#define OFFSET_IS_DEAD                  0x76611dc
+
+// ====================================================================
+
 static int                  g_GlHeight, g_GlWidth;
 static bool                 g_IsSetup = false;
 static std::string          g_IniFileName = "";
@@ -47,6 +66,18 @@ void SetupImGui() {
     ImGui::GetStyle().ScaleAllSizes(3.0f);
 }
 
+// Fungsi bantu untuk mempermudah pemanggilan alamat memori game nantinya
+uintptr_t get_absolute_address(uintptr_t offset) {
+    if (g_TargetModule.start_address == 0) return 0;
+    return (uintptr_t)g_TargetModule.start_address + offset;
+}
+
+// Wadah tempat menggambar ESP Line (Akan kita isi logika matematikanya nanti)
+void DrawESP() {
+    // Uji coba gambar teks sederhana di layar menggunakan ImGui untuk memastikan sistem aktif
+    ImGui::GetForegroundDrawList()->AddText(ImVec2(100, 100), ImColor(255, 0, 0), "ESP System Ready - Offset Loaded");
+}
+
 EGLBoolean (*old_eglSwapBuffers)(EGLDisplay dpy, EGLSurface surface);
 EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     eglQuerySurface(dpy, surface, EGL_WIDTH, &g_GlWidth);
@@ -63,7 +94,11 @@ EGLBoolean hook_eglSwapBuffers(EGLDisplay dpy, EGLSurface surface) {
     ImGui_ImplAndroid_NewFrame(g_GlWidth, g_GlHeight);
     ImGui::NewFrame();
 
+    // Menampilkan menu bawaan ImGui untuk tes sentuhan
     ImGui::ShowDemoWindow();
+
+    // Memanggil fungsi gambar ESP kita
+    DrawESP();
 
     ImGui::EndFrame();
     ImGui::Render();
@@ -80,8 +115,8 @@ void hack_start(const char *_game_data_dir) {
     } while (g_TargetModule.size <= 0);
     LOGI("%s: %p - %p",TargetLibName, g_TargetModule.start_address, g_TargetModule.end_address);
 
-    // TODO: hooking/patching here
-    
+    // Di sini kita bisa menaruh log untuk memastikan alamat base terdeteksi
+    LOGI("Base Address Terdeteksi: %p", g_TargetModule.start_address);
 }
 
 void hack_prepare(const char *_game_data_dir) {
